@@ -5,6 +5,25 @@ A comprehensive HL7 Version 2 message validation and conversion web service deve
 [![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](LICENSE)
 [![Python](https://img.shields.io/badge/Python-3.10+-green.svg)](https://www.python.org/)
 
+## Quick Start
+
+**Try it now (requires Docker):**
+```bash
+git clone https://github.com/hl7pt/hl7v2validator-hl7pt.git
+cd hl7v2validator-hl7pt/docker
+./build.sh
+docker run -p 80:80 hl7validator:v2.0.0
+```
+Visit http://localhost
+
+**Or run locally (requires Python 3.10+):**
+```bash
+git clone https://github.com/hl7pt/hl7v2validator-hl7pt.git
+cd hl7v2validator-hl7pt
+./run_local.sh
+```
+Visit http://localhost:5000
+
 ## Features
 
 ### Internationalization (i18n)
@@ -31,6 +50,9 @@ A comprehensive HL7 Version 2 message validation and conversion web service deve
 ### Web Interface
 - **Interactive UI**: Web-based form for easy message input
 - **Visual Feedback**: Color-coded field highlighting with tooltips
+- **Tree Structure View**: Collapsible hierarchical display of segments, fields, components, and subcomponents
+- **Expand/Collapse Controls**: Buttons to expand or collapse all tree nodes at once
+- **Location Identification**: Shows precise element locations (e.g., PID-3.4.2)
 - **Documentation Links**: Clickable field references to Caristix HL7 documentation
 - **Real-time Results**: Instant validation results with detailed error messages
 
@@ -48,6 +70,7 @@ A comprehensive HL7 Version 2 message validation and conversion web service deve
 - **Disk Space**: ~100MB for dependencies
 
 ### Python Dependencies
+The application is distributed as a Python wheel package with the following dependencies:
 ```
 Flask          # Web framework
 Flask-Babel    # Internationalization and localization
@@ -58,17 +81,35 @@ flasgger       # Swagger API documentation
 pandas         # Data manipulation for CSV conversion
 ```
 
+### Build Requirements
+For building the wheel package:
+- **setuptools** >= 61.0
+- **wheel**
+- **build** (Python build tool)
+
 ## Installation & Usage
 
 ### Option 1: Docker (Recommended)
 
+The Docker build process now uses a Python wheel package for cleaner, more efficient deployments.
+
 #### Using Build Scripts
+
+The build scripts automatically:
+1. Compile translations
+2. Build Python wheel package
+3. Build Docker image with the wheel
 
 **Linux/Mac:**
 ```bash
 cd docker
 chmod +x build.sh
 ./build.sh
+# The script automatically builds with version tag from pyproject.toml (e.g., v2.0.0)
+docker run -p 80:80 hl7validator:v2.0.0
+
+# Or build and tag as 'latest'
+./build.sh --tag latest
 docker run -p 80:80 hl7validator:latest
 ```
 
@@ -76,7 +117,7 @@ docker run -p 80:80 hl7validator:latest
 ```cmd
 cd docker
 build.bat
-docker run -p 80:80 hl7validator:latest
+docker run -p 80:80 hl7validator:v2.0.0
 ```
 
 #### Using Docker Compose
@@ -123,6 +164,25 @@ The scripts will automatically:
 
 #### Manual Setup
 
+**Option A: Install from Wheel (Recommended)**
+```bash
+# Build the wheel package
+python3 -m pip install --upgrade build
+python3 -m build --wheel
+
+# Create virtual environment
+python3 -m venv .venv
+source .venv/bin/activate  # Linux/Mac
+# .venv\Scripts\activate   # Windows
+
+# Install from wheel
+pip install dist/hl7validator_hl7pt-2.0.0-py3-none-any.whl
+
+# Run the application
+hl7validator
+```
+
+**Option B: Development Install**
 ```bash
 # Create virtual environment
 python3 -m venv .venv
@@ -193,7 +253,7 @@ This runs with configurable workers and threads (default: 2 workers, 2 threads p
 
 ```
 hl7v2validator-hl7pt/
-├── hl7validator/               # Main application package
+├── hl7validator/              # Main application package
 │   ├── __init__.py            # Flask app initialization and Babel config
 │   ├── api.py                 # Core validation and conversion logic
 │   ├── views.py               # Route handlers (web & API endpoints)
@@ -246,11 +306,25 @@ hl7v2validator-hl7pt/
 6. Performs datetime format validation
 7. Returns detailed validation report
 
+### Tree Structure View
+
+The validator provides an interactive tree view that displays the HL7 message in a hierarchical structure:
+
+- **Segments**: Top-level nodes showing each segment (MSH, PID, PV1, etc.)
+- **Fields**: Child nodes showing field location (e.g., PID-3) with field name and value
+- **Components**: Sub-nodes for composite fields (e.g., PID-3.1) with component names
+- **Subcomponents**: Deepest level for complex data types (e.g., PID-3.1.2)
+- **Interactive Navigation**: Click any node to expand/collapse its children
+- **Bulk Controls**: "Expand All" and "Collapse All" buttons for easy navigation
+- **Specification Links**: 📖 icon on segments links to Caristix documentation
+
+**Location Format**: `SEGMENT-FIELD.COMPONENT.SUBCOMPONENT` (e.g., `PID-3.4.2`)
+
 ### Supported Message Types
 
 The validator automatically handles common ADT (Admission, Discharge, Transfer) message structure references including:
 - ADT^A01, A04, A07, A08, A10, A11, A12, A13, A14, A28, A31
-- Automatic MSH-9.3 message structure correction
+- Automatic MSH-9.3 message structure correction for versions <= 2.3
 
 ### Logging
 
@@ -260,6 +334,99 @@ Application logs are stored in `logs/` directory:
 - **Rotation**: 1MB max file size, 20 backup files
 
 ## Development
+
+### Building the Package
+
+Build the Python wheel package from source:
+
+```bash
+# Install build tools
+python3 -m pip install --upgrade build
+
+# Build the wheel package
+python3 -m build --wheel
+
+# The wheel will be created in dist/hl7validator_hl7pt-2.0.0-py3-none-any.whl
+```
+
+### Complete Build and Run Examples
+
+**Example 1: Quick Local Development**
+```bash
+# Clone and run
+git clone https://github.com/hl7pt/hl7v2validator-hl7pt.git
+cd hl7v2validator-hl7pt
+./run_local.sh
+
+# Application runs on http://localhost:5000
+```
+
+**Example 2: Build Wheel and Install**
+```bash
+# Build wheel
+python3 -m build --wheel
+
+# Install in a clean environment
+python3 -m venv fresh_env
+source fresh_env/bin/activate
+pip install dist/hl7validator_hl7pt-2.0.0-py3-none-any.whl
+
+# Run the application
+hl7validator
+# Runs on http://localhost:80
+```
+
+**Example 3: Docker Build and Run**
+```bash
+# Build Docker image
+cd docker
+./build.sh --tag latest
+
+# Run container
+docker run -d \
+  -p 80:80 \
+  --name hl7validator \
+  --restart unless-stopped \
+  hl7validator:latest
+
+# View logs
+docker logs -f hl7validator
+
+# Stop and remove
+docker stop hl7validator
+docker rm hl7validator
+```
+
+**Example 4: Translation Workflow**
+```bash
+# 1. Extract strings from code
+pybabel extract -F babel.cfg -o messages.pot .
+
+# 2. Update Portuguese translations
+pybabel update -i messages.pot -d hl7validator/translations
+
+# 3. Edit translations
+nano hl7validator/translations/pt/LC_MESSAGES/messages.po
+
+# 4. Compile translations
+pybabel compile -d hl7validator/translations
+
+# 5. Test translations
+./run_local.sh
+# Visit http://localhost:5000/pt
+```
+
+**Example 5: Production Deployment with Gunicorn**
+```bash
+# Install from wheel
+pip install dist/hl7validator_hl7pt-2.0.0-py3-none-any.whl
+
+# Run with production settings
+./docker/gunicorn.sh
+
+# Or use the run script with --prod flag
+./run_local.sh --prod --port 80
+```
 
 ### Running Tests
 
@@ -276,7 +443,14 @@ See [test.http](test.http) for example API requests. Use REST client extensions 
 
 **Live Instance**: https://version2.hl7.pt
 
-**Version**: 0.0.4
+**Version**: 2.0.0
+
+### Building for Production
+
+The project uses `pyproject.toml` for package configuration. Version numbers are centrally managed:
+- **Source**: `pyproject.toml` (single source of truth)
+- **Runtime Access**: Available via `hl7validator.__version__`
+- **API Version**: Automatically synced with package version
 
 ## About
 
@@ -324,12 +498,79 @@ The application supports multiple languages with automatic detection and manual 
 2. **Manual selection**: Click EN or PT buttons in top-right corner
 3. **URL-based**: Visit `/en` or `/pt` directly
 
+### Translation Workflow
+
+**Setup and Extract Translatable Strings**:
+```bash
+# Extract strings from code (creates/updates messages.pot)
+pybabel extract -F babel.cfg -o messages.pot .
+
+# Initialize a new language (first time only)
+pybabel init -i messages.pot -d hl7validator/translations -l pt
+
+# Or update existing translations with new strings
+pybabel update -i messages.pot -d hl7validator/translations
+```
+
+**Translate**:
+Edit `hl7validator/translations/pt/LC_MESSAGES/messages.po`:
+```po
+msgid "Submit"
+msgstr "Submeter"
+
+msgid "HL7 V2 Validator"
+msgstr "Validador HL7 V2"
+```
+
+**Compile and Test**:
+```bash
+# Compile translations (creates .mo files)
+pybabel compile -d hl7validator/translations
+
+# Run the application to test
+./run_local.sh
+```
+
+**Quick Translation Setup**:
+You can also use the helper script:
+```bash
+python create_translations.py
+```
+
 **For Developers**:
 See [I18N_GUIDE.md](I18N_GUIDE.md) for:
 - Adding new languages
-- Updating translations
-- Translation workflow
-- Testing procedures
+- Complete translation workflow
+- Best practices
+- Troubleshooting
+
+## Command Reference
+
+### Quick Reference Table
+
+| Task | Command |
+|------|---------|
+| **Run locally (development)** | `./run_local.sh` |
+| **Run locally (production)** | `./run_local.sh --prod` |
+| **Build wheel package** | `python3 -m build --wheel` |
+| **Build Docker image** | `cd docker && ./build.sh` |
+| **Build Docker (latest tag)** | `cd docker && ./build.sh --tag latest` |
+| **Run Docker container** | `docker run -p 80:80 hl7validator:v2.0.0` |
+| **Extract translation strings** | `pybabel extract -F babel.cfg -o messages.pot .` |
+| **Update translations** | `pybabel update -i messages.pot -d hl7validator/translations` |
+| **Compile translations** | `pybabel compile -d hl7validator/translations` |
+| **Initialize new language** | `pybabel init -i messages.pot -d hl7validator/translations -l <lang>` |
+| **Setup translations** | `python create_translations.py` |
+
+### Environment Variables
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `HOST` | `127.0.0.1` | Host to bind the application |
+| `PORT` | `5000` (local) / `80` (Docker) | Port number |
+| `DEBUG` | `true` | Enable Flask debug mode |
+| `SECRET_KEY` | Auto-generated | Flask session secret key (set in production) |
+| `FLASK_APP` | `run.py` | Flask application entry point |
 
 ## References
 

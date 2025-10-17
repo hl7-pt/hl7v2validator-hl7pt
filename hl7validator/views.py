@@ -10,11 +10,12 @@ from flask import (
 )
 from flask_babel import gettext, get_locale
 import os
-from hl7validator.api import hl7validatorapi, from_hl7_to_df, highlight_message
+from hl7validator.api import hl7validatorapi, from_hl7_to_df, highlight_message, build_tree_structure
 from hl7validator import app
+from hl7validator.__version__ import __version__
 
-# http://flask.pocoo.org/docs/1.0/
-VERSION = "1.0.0"
+# Version is now managed centrally in __version__.py and pyproject.toml
+VERSION = __version__
 
 
 @app.before_request
@@ -47,27 +48,35 @@ def home(lang=None):
         session['language'] = lang
 
     parsed_message = None
+    tree_structure = None
     if request.method == "POST":
         req = request.form.get("options")
         msg = request.form.get("msg")
+        validation_level = request.form.get("validation_level", "tolerant")
         if not msg:
             return render_template("hl7validatorhome.html", version=VERSION)
         elif req == "hl7v2":
-            validation = hl7validatorapi(request.form.get("msg"))
+            validation = hl7validatorapi(request.form.get("msg"), validation_level=validation_level)
             print(validation)
             if validation["hl7version"]:
                 parsed_message, validation = highlight_message(msg, validation)
-                #   print(parsed_message)
+                tree_structure, validation = build_tree_structure(msg, validation)
             details = sorted(validation["details"], key=lambda d: list(d.values())[0])
+            warnings = validation.get("warnings", [])
+
+            # Translate validation message
+            status_message = gettext(validation["message"])
 
             return render_template(
                 "hl7validatorhome.html",
-                title=validation["message"],
+                title=status_message,
                 msg=msg,
                 result=details,
+                warnings=warnings,
                 version=VERSION,
                 hl7version=validation["hl7version"],
                 parsed=parsed_message,
+                tree=tree_structure,
             )
 
         elif req == "converter":
@@ -85,8 +94,9 @@ def hl7v2validatorapi():
     """
 
     data = request.json["data"]
+    validation_level = request.json.get("validation_level", "tolerant")
 
-    return jsonify(hl7validatorapi(data))
+    return jsonify(hl7validatorapi(data, validation_level=validation_level))
 
 
 @app.route("/api/hl7/v1/convert/", methods=["POST"])
