@@ -130,9 +130,10 @@ if [ ! -f "$DOCKERFILE_PATH" ]; then
     exit 1
 fi
 
-# Check if we're in the correct directory
-if [ ! -f "../requirements.txt" ]; then
-    echo -e "${RED}Error: requirements.txt not found. Are you in the docker directory?${NC}"
+# Check repository structure is accessible from script location
+if [ ! -f "$PROJECT_ROOT/requirements.txt" ]; then
+    echo -e "${RED}Error: requirements.txt not found at $PROJECT_ROOT/requirements.txt${NC}"
+    echo -e "${RED}       Make sure the repository is checked out completely${NC}"
     exit 1
 fi
 
@@ -160,9 +161,9 @@ if command -v python3 &> /dev/null; then
     (cd "$PROJECT_ROOT" && python3 -m pip install --user --upgrade build 2>/dev/null || true)
     (cd "$PROJECT_ROOT" && python3 -m build --wheel 2>&1)
 
-    if [ -d "$PROJECT_ROOT/dist" ] && [ -n "$(ls -A $PROJECT_ROOT/dist/*.whl 2>/dev/null)" ]; then
+    if [ -d "$PROJECT_ROOT/dist" ] && [ -n "$(ls -A "$PROJECT_ROOT"/dist/*.whl 2>/dev/null)" ]; then
         echo -e "${GREEN}✓ Wheel package built successfully${NC}"
-        echo -e "${GREEN}  Package: $(ls $PROJECT_ROOT/dist/*.whl)${NC}"
+        echo -e "${GREEN}  Package: $(ls "$PROJECT_ROOT"/dist/*.whl)${NC}"
     else
         echo -e "${RED}✗ Wheel build failed${NC}"
         exit 1
@@ -215,13 +216,13 @@ fi
 # Show image details
 echo ""
 echo -e "${GREEN}Image details:${NC}"
-docker images $IMAGE_NAME:$IMAGE_TAG
+docker images "$IMAGE_NAME":"$IMAGE_TAG"
 
 # Push to registry if requested
 if [ "$PUSH" = true ]; then
     echo ""
     echo -e "${GREEN}Pushing image to registry...${NC}"
-    if docker push $IMAGE_NAME:$IMAGE_TAG; then
+    if docker push "$IMAGE_NAME":"$IMAGE_TAG"; then
         echo -e "${GREEN}✓ Push successful${NC}"
     else
         echo -e "${RED}✗ Push failed${NC}"
